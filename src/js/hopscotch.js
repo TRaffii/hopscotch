@@ -698,10 +698,13 @@
 
       // MODIFY X & Y IF CONTAINER CAN BE SCROLLED
       if (step.containerScroll) {
+        var initialContainerTop = step.containerScroll.scrollTop;
         var currentTop = top;
+        var self = this;
         this.onScroll = function(e) {
+          
           var scrollTop = e.currentTarget.scrollTop;
-          el.style.top = (currentTop - scrollTop) + 'px';
+          el.style.top = (currentTop - scrollTop + initialContainerTop) + 'px';
         };
     
         //Add listener to change bubble position on scroll
