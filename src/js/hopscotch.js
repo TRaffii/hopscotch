@@ -1410,28 +1410,39 @@
      * @private
      * @param {Function} cb Callback to invoke after done scrolling.
      */
-    adjustWindowScroll = function adjustWindowScroll(cb) {
+    adjustWindowScroll = function adjustWindowScroll(cb, step) {
       var bubble = getBubble(),
 
 
       // Calculate the bubble element top and bottom position
       bubbleEl = bubble.element,
           bubbleTop = utils.getPixelValue(bubbleEl.style.top),
-          bubbleBottom = bubbleTop + utils.getPixelValue(bubbleEl.offsetHeight),
+          bubbleBottom = bubbleTop + utils.getPixelValue(bubbleEl.offsetHeight);
 
 
       // Calculate the target element top and bottom position
-      targetEl = utils.getStepTarget(getCurrStep()),
+      if (step.containerScroll) {
+          var targetEl = utils.getStepTarget(getCurrStep()),
+          targetBounds = targetEl.getBoundingClientRect(),
+          targetElTop = targetBounds.top + step.containerScroll.scrollTop,
+          targetElBottom = targetBounds.bottom + step.containerScroll.scrollTop,
+          targetTop = targetElTop;
+      }
+      else {
+          var targetEl = utils.getStepTarget(getCurrStep()),
           targetBounds = targetEl.getBoundingClientRect(),
           targetElTop = targetBounds.top + utils.getScrollTop(),
           targetElBottom = targetBounds.bottom + utils.getScrollTop(),
+          targetTop = bubbleTop < targetElTop ? bubbleTop : targetElTop;
+      }
 
 
       // The higher of the two: bubble or target
-      targetTop = bubbleTop < targetElTop ? bubbleTop : targetElTop,
+      
+      // var targetTop = bubbleTop < targetElTop ? bubbleTop : targetElTop,
 
       // The lower of the two: bubble or target
-      targetBottom = bubbleBottom > targetElBottom ? bubbleBottom : targetElBottom,
+      var targetBottom = bubbleBottom > targetElBottom ? bubbleBottom : targetElBottom,
 
 
       // Calculate the current viewport top and bottom
@@ -1448,9 +1459,13 @@
           scrollIncr,
           scrollTimeout,
           _scrollTimeoutFn;
-
+      var elementToScroll = window;
+      if (step.containerScroll) {
+        elementToScroll = step.containerScroll;
+      }
       // Target and bubble are both visible in viewport
-      if (targetTop >= windowTop && (targetTop <= windowTop + getOption('scrollTopMargin') || targetBottom <= windowBottom)) {
+      if (targetTop >= windowTop && (targetTop <= windowTop + getOption('scrollTopMargin') || targetBottom <= windowBottom)
+        && !step.containerScroll) {
         if (cb) {
           cb();
         } // HopscotchBubble.show
@@ -1458,7 +1473,7 @@
 
       // Abrupt scroll to scroll target
       else if (!getOption('smoothScroll')) {
-          window.scrollTo(0, scrollToVal);
+        elementToScroll.scrollTo(0, scrollToVal);
 
           if (cb) {
             cb();
@@ -1467,6 +1482,7 @@
 
         // Smooth scroll to scroll target
         else {
+          
             // Use YUI if it exists
             if ((typeof YAHOO === 'undefined' ? 'undefined' : _typeof(YAHOO)) !== undefinedStr && _typeof(YAHOO.env) !== undefinedStr && _typeof(YAHOO.env.ua) !== undefinedStr && _typeof(YAHOO.util) !== undefinedStr && _typeof(YAHOO.util.Scroll) !== undefinedStr) {
               scrollEl = YAHOO.env.ua.webkit ? document.body : document.documentElement;
@@ -1480,7 +1496,7 @@
 
             // Use jQuery if it exists
             else if (hasJquery) {
-                jQuery('body, html').animate({ scrollTop: scrollToVal }, getOption('scrollDuration'), cb);
+                jQuery(elementToScroll).animate({ scrollTop: scrollToVal }, getOption('scrollDuration'), cb);
               }
 
               // Use my crummy setInterval scroll solution if we're using plain, vanilla Javascript.
@@ -1506,11 +1522,11 @@
                       if (cb) {
                         cb();
                       } // HopscotchBubble.show
-                      window.scrollTo(0, scrollTarget);
+                      elementToScroll.scrollTo(0, scrollTarget);
                       return;
                     }
 
-                    window.scrollTo(0, scrollTarget);
+                    elementToScroll.scrollTo(0, scrollTarget);
 
                     if (utils.getScrollTop() === scrollTop) {
                       // Couldn't scroll any further.
@@ -1788,7 +1804,7 @@
       bubble.render(step, stepNum, function (adjustScroll) {
         // when done adjusting window scroll, call showBubble helper fn
         if (adjustScroll) {
-          adjustWindowScroll(showBubble);
+          adjustWindowScroll(showBubble, step);
         } else {
           showBubble();
         }
